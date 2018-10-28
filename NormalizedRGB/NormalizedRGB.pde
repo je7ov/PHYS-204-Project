@@ -12,25 +12,22 @@ color normalizeRGBPixel(color pixel) {
   float g = green(pixel);
   float b = blue(pixel);
   float sum = r + b + g;
-  
+
   return color(r/sum * 255, g/sum * 255, b/sum * 255);
 }
 
 void normalizeRGB() {  
   normalizedImg.loadPixels();
   for (int y=0; y<img.height; y++) {
-     for (int x=0; x<img.width; x++) {
-       int loc = x + y * img.width;
-       
-       color normalized = normalizeRGBPixel(img.pixels[loc]);
+    for (int x=0; x<img.width; x++) {
+      int loc = x + y * img.width;
 
-       normalizedImg.pixels[loc] = normalized;
-     }
+      color normalized = normalizeRGBPixel(img.pixels[loc]);
+
+      normalizedImg.pixels[loc] = normalized;
+    }
   }
   normalizedImg.updatePixels();
-  
-  println("nImg width: " + normalizedImg.width);
-  println("nImg height: " + normalizedImg.height);
 }
 
 void draw() {
@@ -38,9 +35,9 @@ void draw() {
   if (img != null) {
     image(img, 0, 0);
     if (landscape) {
-      image(normalizedImg, 0, img.height + 1);      
+image(normalizedImg, 0, img.height);  
     } else {
-      image(normalizedImg, img.width + 1, 0);
+      image(normalizedImg, img.width, 0);
     }
   }
 }
@@ -51,34 +48,42 @@ void imageSelected(File selection) {
   } else {
     img = loadImage(selection.getAbsolutePath());
     landscape = img.width > img.height;
-    println("landscape: " + landscape);
-    println("img width: " + img.width);
-    println("img height: " + img.height);
-    resizeImg();
-    println("img width: " + img.width);
-    println("img height: " + img.height);
     normalizedImg = createImage(img.width, img.height, RGB);
+
+    resizeImgAndSurface(img);
+    resizeImg(normalizedImg);
+
     normalizeRGB();
   }
 }
 
-void resizeImg() {
+void resizeImgAndSurface(PImage rImg) {
+  int newSize = resizeImg(rImg);
+  
+  if (landscape) {
+    surface.setSize(newSize, height);
+  } else {
+    surface.setSize(width, newSize);
+  }
+}
+
+int resizeImg(PImage rImg) {
   float ratio;
+
+  if (landscape) {
+    ratio = float(height/2) / float(rImg.height);
+  } else {
+    ratio = float(width/2) / float(rImg.width);
+  }
+
+  int newH = floor(rImg.height * ratio);
+  int newW = floor(rImg.width * ratio);
+
+  rImg.resize(newW, newH);
   
   if (landscape) {
-    ratio = float(height/2) / float(img.height);
+    return newW;
   } else {
-    ratio = float(width/2) / float(img.width);
+    return newH;
   }
-  
-  int newH = floor(img.height * ratio);
-  int newW = floor(img.width * ratio);
-  
-  if (landscape) {
-    surface.setSize(newW, height);  
-  } else {
-    surface.setSize(width, newH); 
-  }
-  
-  img.resize(newW, newH);
 }
