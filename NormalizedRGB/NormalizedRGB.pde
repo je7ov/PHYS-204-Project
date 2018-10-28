@@ -4,7 +4,7 @@ boolean landscape;
 
 void setup() {
   size(960, 960);
-  selectInput("Select an image to process", "imageSelected");
+  openUserImage();
 }
 
 color normalizeRGBPixel(color pixel) {
@@ -85,5 +85,15 @@ int resizeImg(PImage rImg) {
     return newW;
   } else {
     return newH;
+  }
+}
+
+void openUserImage() {
+  selectInput("Select an image to process", "imageSelected");
+}
+
+void keyPressed () {
+  if (key == 'o') {
+    openUserImage();
   }
 }
