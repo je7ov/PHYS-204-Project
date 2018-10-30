@@ -1,3 +1,5 @@
+import processing.video.*;
+
 PImage img;
 PImage normalizedImg;
 boolean landscape;
@@ -12,7 +14,7 @@ void setup() {
 }
 
 color normalizeRGBPixel(color pixel) {
-  float r = red(pixel);
+  float r = red(pixel);  
   float g = green(pixel);
   float b = blue(pixel);
   float sum = r + b + g;
@@ -39,7 +41,7 @@ void draw() {
   if (img != null) {
     image(img, 0, 0);
     if (landscape) {
-      image(normalizedImg, 0, img.height);  
+image(normalizedImg, 0, img.height);  
     } else {
       image(normalizedImg, img.width, 0);
     }
