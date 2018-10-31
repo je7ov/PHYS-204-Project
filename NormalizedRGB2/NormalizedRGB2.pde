@@ -1,8 +1,10 @@
 import processing.video.*;
 
+Capture cam;
 PImage img;
 PImage normalizedImg;
 boolean landscape;
+boolean usingCamera = false;
 int mHeight;
 int mWidth;
 
@@ -10,7 +12,22 @@ void setup() {
   size(64, 64);
   mHeight = displayHeight/5*4;
   mWidth = mHeight;
+
+  cameraSetup();
   openUserImage();
+}
+
+void cameraSetup() {
+  String[] cameras = Capture.list();
+
+  if (cameras.length == 0) {
+    println("No cameras available for capture");
+  } else {
+    for (int i=0; i<cameras.length; i++) {
+      println(cameras[i]);
+    }
+    cam = new Capture(this, cameras[0]);
+  }
 }
 
 color normalizeRGBPixel(color pixel) {
@@ -38,10 +55,19 @@ void normalizeRGB() {
 
 void draw() {
   clear();
+
+  if (usingCamera) {
+    if (cam.available()) {
+      cam.read();
+    }
+    image(cam, 0, 0);
+  }
+
+
   if (img != null) {
     image(img, 0, 0);
     if (landscape) {
-image(normalizedImg, 0, img.height);  
+      image(normalizedImg, 0, img.height);
     } else {
       image(normalizedImg, img.width, 0);
     }
@@ -65,7 +91,7 @@ void imageSelected(File selection) {
 
 void resizeImgAndSurface(PImage rImg) {
   int newSize = resizeImg(rImg);
-  
+
   if (landscape) {
     surface.setSize(newSize, mHeight);
   } else {
@@ -86,7 +112,7 @@ int resizeImg(PImage rImg) {
   int newW = floor(rImg.width * ratio);
 
   rImg.resize(newW, newH);
-  
+
   if (landscape) {
     return newW;
   } else {
@@ -101,5 +127,14 @@ void openUserImage() {
 void keyPressed () {
   if (key == 'o') {
     openUserImage();
+  }
+  if (key == 'c') {
+    if (usingCamera) {
+      usingCamera = false;
+      cam.stop();
+    } else {
+      usingCamera = true;
+      cam.start();
+    }
   }
 }
