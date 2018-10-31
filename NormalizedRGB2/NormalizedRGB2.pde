@@ -1,12 +1,19 @@
 import processing.video.*;
 
 Capture cam;
+boolean usingCamera = false;
+int camWidth = 352;
+int camHeight = 288;
+int camNum = 9;
+
 PImage img;
 PImage normalizedImg;
 boolean landscape;
-boolean usingCamera = false;
+boolean openingFile = false;
 int mHeight;
 int mWidth;
+int sHeight = 64;
+int sWidth = 64;
 
 void setup() {
   size(64, 64);
@@ -17,6 +24,31 @@ void setup() {
   openUserImage();
 }
 
+void draw() {
+  clear();
+
+  if (!openingFile) {
+    if (cam != null && usingCamera) {
+      if (cam.available()) {
+        cam.read();
+        normalizeRGB(cam);
+      }
+      image(cam, 0, 0);
+      image(normalizedImg, 0, cam.height);
+    } else {
+      if (img != null) {
+        normalizeRGB(img);
+        image(img, 0, 0);
+        if (landscape) {
+          image(normalizedImg, 0, img.height);
+        } else {
+          image(normalizedImg, img.width, 0);
+        }
+      }
+    }
+  }
+}
+
 void cameraSetup() {
   String[] cameras = Capture.list();
 
@@ -24,9 +56,9 @@ void cameraSetup() {
     println("No cameras available for capture");
   } else {
     for (int i=0; i<cameras.length; i++) {
-      println(cameras[i]);
+      println(i, cameras[i]);
     }
-    cam = new Capture(this, cameras[0]);
+    cam = new Capture(this, cameras[camNum]);
   }
 }
 
@@ -39,53 +71,46 @@ color normalizeRGBPixel(color pixel) {
   return color(r/sum * 255, g/sum * 255, b/sum * 255);
 }
 
-void normalizeRGB() {  
+void normalizeRGB(PImage pImg) {  
   normalizedImg.loadPixels();
-  for (int y=0; y<img.height; y++) {
-    for (int x=0; x<img.width; x++) {
-      int loc = x + y * img.width;
 
-      color normalized = normalizeRGBPixel(img.pixels[loc]);
+  for (int y=0; y<pImg.height; y++) {
+    for (int x=0; x<pImg.width; x++) {
+      int loc = x + y * pImg.width;
 
+      color normalized = normalizeRGBPixel(pImg.pixels[loc]);
+      
       normalizedImg.pixels[loc] = normalized;
     }
   }
+
   normalizedImg.updatePixels();
 }
 
-void draw() {
-  clear();
-
-  if (usingCamera) {
-    if (cam.available()) {
-      cam.read();
-    }
-    image(cam, 0, 0);
-  }
-
-
-  if (img != null) {
-    image(img, 0, 0);
-    if (landscape) {
-      image(normalizedImg, 0, img.height);
-    } else {
-      image(normalizedImg, img.width, 0);
-    }
-  }
-}
-
 void imageSelected(File selection) {
+  openingFile = true;
+  
   if (selection == null) {
     println("Window was closed or user clicked cancel");
   } else {
+    usingCamera = false;
     img = loadImage(selection.getAbsolutePath());
-    landscape = img.width > img.height;
-    normalizedImg = createImage(img.width, img.height, RGB);
+    setupImages();
+  }
+  
+  openingFile = false;
+}
 
-    resizeImgAndSurface(img);
-    resizeImg(normalizedImg);
-
-    normalizeRGB();
+void setupImages() {
+  if (usingCamera) { 
+    normalizedImg = createImage(camWidth, camHeight, RGB);
+  } else {
+    if (img != null) {
+      landscape = img.width > img.height;
+      normalizedImg = createImage(img.width, img.height, RGB);
+      resizeImgAndSurface(img);
+      resizeImg(normalizedImg);
+    }
   }
 }
 
@@ -94,8 +119,12 @@ void resizeImgAndSurface(PImage rImg) {
 
   if (landscape) {
     surface.setSize(newSize, mHeight);
+    sWidth = newSize;
+    sHeight = mHeight;
   } else {
     surface.setSize(mWidth, newSize);
+    sWidth = mWidth;
+    sHeight = newSize;
   }
 }
 
@@ -134,7 +163,9 @@ void keyPressed () {
       cam.stop();
     } else {
       usingCamera = true;
+      surface.setSize(camWidth, camHeight*2);
       cam.start();
     }
+    setupImages();
   }
 }

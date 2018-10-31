@@ -1,3 +1,11 @@
+import processing.video.*;
+
+Capture cam;
+boolean usingCamera = false;
+int camWidth = 352;
+int camHeight = 288;
+int camNum = 9;
+
 PImage img;
 PImage thresholdImg;
 boolean landscape;
@@ -21,19 +29,45 @@ void setup() {
   mHeight = displayHeight/5*4;
   mWidth = displayHeight;
 
+  cameraSetup();
   openUserImage();
 }
 
 void draw() {
   clear();
-  if (!openingFile && img != null) {
-    thresholdImg();
-    image(img, 0, 0);
-    if (landscape) {
-      image(thresholdImg, 0, img.height);
+
+  if (!openingFile) {
+    if (cam != null && usingCamera) {
+      if (cam.available()) {
+        cam.read();
+        thresholdImg(cam);
+      }
+      image(cam, 0, 0);
+      image(thresholdImg, 0, cam.height);
     } else {
-      image(thresholdImg, img.width, 0);
+      if (img != null) {
+        thresholdImg(img);
+        image(img, 0, 0);
+        if (landscape) {
+          image(thresholdImg, 0, img.height);
+        } else {
+          image(thresholdImg, img.width, 0);
+        }
+      }
     }
+  }
+}
+
+void cameraSetup() {
+  String[] cameras = Capture.list();
+
+  if (cameras.length == 0) {
+    println("No cameras available for capture");
+  } else {
+    for (int i=0; i<cameras.length; i++) {
+      println(i, cameras[i]);
+    }
+    cam = new Capture(this, cameras[camNum]);
   }
 }
 
@@ -43,19 +77,26 @@ void openUserImage() {
 
 void imageSelected(File selection) {
   openingFile = true;
-  
+
   if (selection == null) {
     println("Window was closed or user clicked cancel");
   } else {
     img = loadImage(selection.getAbsolutePath());
+    setupImages();
+  }
+
+  openingFile = false;
+}
+
+void setupImages() {
+  if (usingCamera) {
+    thresholdImg = createImage(camWidth, camHeight, RGB);
+  } else {
     landscape = img.width > img.height;
     thresholdImg = createImage(img.width, img.height, RGB);
-
     resizeImgAndSurface(img);
     resizeImg(thresholdImg);
   }
-  
-  openingFile = false;
 }
 
 void resizeImgAndSurface(PImage rImg) {
@@ -89,16 +130,13 @@ int resizeImg(PImage rImg) {
   }
 }
 
-void thresholdImg() {
+void thresholdImg(PImage pImg) {
   thresholdImg.loadPixels();
-  for (int y=0; y<img.height; y++) {
-    for (int x=0; x<img.width; x++) {
-      int loc = x + y * img.width;
+  for (int y=0; y<pImg.height; y++) {
+    for (int x=0; x<pImg.width; x++) {
+      int loc = x + y * pImg.width;
 
-      if (img.pixels.length <= loc) {
-        println(loc);
-      }
-      color currentPixel = img.pixels[loc];
+      color currentPixel = pImg.pixels[loc];
 
       color rChannel = redChannel(currentPixel);
       color gChannel = greenChannel(currentPixel);
@@ -106,20 +144,20 @@ void thresholdImg() {
 
       color c;
       switch(currentFilter) {
-        case RED:
-          color gbChannels = addChannels(gChannel, bChannel);
-          color rFiltered = subtractChannels(rChannel, gbChannels);
-          c = threshold(rFiltered);
-          break;
-        case GREEN:
-          color rbChannels = addChannels(rChannel, bChannel);
-          color gFiltered = subtractChannels(gChannel, rbChannels);
-          c = threshold(gFiltered);
-          break;
-        default:
-          color rgChannels = addChannels(rChannel, gChannel);
-          color bFiltered = subtractChannels(bChannel, rgChannels);
-          c = threshold(bFiltered);
+      case RED:
+        color gbChannels = addChannels(gChannel, bChannel);
+        color rFiltered = subtractChannels(rChannel, gbChannels);
+        c = threshold(rFiltered);
+        break;
+      case GREEN:
+        color rbChannels = addChannels(rChannel, bChannel);
+        color gFiltered = subtractChannels(gChannel, rbChannels);
+        c = threshold(gFiltered);
+        break;
+      default:
+        color rgChannels = addChannels(rChannel, gChannel);
+        color bFiltered = subtractChannels(bChannel, rgChannels);
+        c = threshold(bFiltered);
       }
 
       if (thresholdImg.pixels.length <= loc) {
@@ -192,5 +230,16 @@ void keyPressed() {
     currentFilter = GREEN;
   } else if (key == 'b') {
     currentFilter = BLUE;
+  }
+  if (key == 'c') {
+    if (usingCamera) {
+      usingCamera = false;
+      cam.stop();
+    } else {
+      usingCamera = true;
+      surface.setSize(camWidth, camHeight*2);
+      cam.start();
+    }
+    setupImages();
   }
 }
